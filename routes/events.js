@@ -24,9 +24,9 @@ router.get('/:id', async (req, res) => {
 
     try {
         //comparing event ids
-        let event = await db('events').select().where('id', id).first(); 
+        let event = await db('events').select().where('id', id).first();
 
-        if(utils.isNullOrUndefined(event))
+        if (utils.isNullOrUndefined(event))
             return res.json({ error: 'No such event.' });
 
         //Arrays to be read
@@ -37,12 +37,12 @@ router.get('/:id', async (req, res) => {
         let skillsQuery = db('skills').select();
         let tasksQuery = db('tasks').select();
 
-        if(event.jobs.length > 0) {
+        if (event.jobs.length > 0) {
             event.jobs.forEach(jobID => jobsQuery.where('id', jobID));
             event.jobs = await jobsQuery;
         }
-        
-        event.jobs.forEach(job => { 
+
+        event.jobs.forEach(job => {
             job.tasks = JSON.parse(job.tasks);
             job.skills = JSON.parse(job.skills);
 
@@ -54,10 +54,10 @@ router.get('/:id', async (req, res) => {
         let skills = await skillsQuery;
 
         event.jobs.forEach(job => {
-            for(let i in job.tasks)
+            for (let i in job.tasks)
                 job.tasks[i] = tasks.find(t => t.id === job.tasks[i]);
-            for(let i in job.skills)
-                job.skills[i] = skills.find(s => s.id === job.skills[i]);        
+            for (let i in job.skills)
+                job.skills[i] = skills.find(s => s.id === job.skills[i]);
         });
 
         res.json(event);
