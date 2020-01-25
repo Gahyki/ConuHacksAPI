@@ -57,13 +57,14 @@ router.get('/current', needAuth, (req, res) => {
     res.json(req.user);
 });
 
-router.post('/:id', needAuth, (req, res) => {
+router.get('/:id', async (req, res) => {
     if (utils.isEmptyOrNull(req.params, 'id'))
         return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid user id.' });
 
-    let { user_id } = req.params;
+    let { id } = req.params;
 
     try {
+        let event = await db('events').select().where('id', id).first();
 
         let user = await db('users').select().where('id', id).first();
         if (utils.isNullOrUndefined(user))
@@ -71,7 +72,7 @@ router.post('/:id', needAuth, (req, res) => {
 
         delete user.password;
 
-        let user_skills = await db('user_skills').select().where('user_id', user_id)
+        let user_skills = await db('user_skills').select().where('user_id', id)
         user.skills = []
         if (utils.isEmptyOrNull(user_skills)) { // if user has no skills yet
             res.json(user)
