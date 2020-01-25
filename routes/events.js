@@ -30,8 +30,11 @@ router.get('/:id', async (req, res) => {
             event.jobs.forEach(jobID => jobsQuery.where('id', jobID));
             event.jobs = await jobsQuery;
         }
-
+        
         event.jobs.forEach(job => { 
+            job.tasks = JSON.parse(job.tasks);
+            job.skills = JSON.parse(job.skills);
+
             job.tasks.forEach(taskID => tasksQuery.where('id', taskID));
             job.skills.forEach(skillID => skillsQuery.where('id', skillID));
         });
