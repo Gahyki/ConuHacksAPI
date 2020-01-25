@@ -1,6 +1,6 @@
 const knex = require('knex');
 
-const cloudcode = knex({
+const conuhacks = knex({
     client: 'mysql2',
     connection: {
         host: process.env.DB_HOST,
@@ -10,4 +10,4 @@ const cloudcode = knex({
     }
 });
 
-module.exports = cloudcode;
+module.exports = conuhacks;
