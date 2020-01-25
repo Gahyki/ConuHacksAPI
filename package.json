@@ -1,19 +1,23 @@
 {
-  "name": "2020",
+  "name": "cloud-code-api",
   "version": "1.0.0",
-  "description": "conuhacks",
-  "main": "index.js",
+  "description": "",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Gahyki/ConuHacksAPI.git"
+    "start": "node ./app.js"
   },
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Gahyki/ConuHacksAPI/issues"
-  },
-  "homepage": "https://github.com/Gahyki/ConuHacksAPI#readme"
+  "dependencies": {
+    "bcrypt": "^3.0.7",
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.4",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-session": "^1.17.0",
+    "knex": "^0.20.7",
+    "mysql2": "^2.1.0",
+    "passport": "^0.4.1",
+    "passport-local": "^1.0.0"
+  }
 }
