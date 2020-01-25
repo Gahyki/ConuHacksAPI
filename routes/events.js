@@ -46,9 +46,24 @@ router.get('/:id', async (req, res) => {
             job.tasks = JSON.parse(job.tasks);
             job.skills = JSON.parse(job.skills);
 
-            job.tasks.forEach(taskID => tasksQuery.where('id', taskID));
-            job.skills.forEach(skillID => skillsQuery.where('id', skillID));
+            for(let i in job.tasks) {
+                if(i === 0) {
+                    tasksQuery.where('id', job.tasks[i]);
+                } else {
+                    tasksQuery.orWhere(`id`, job.tasks[i]);
+                }
+            }
+
+            for(let i in job.skills) {
+                if(i === 0) {
+                    skillsQuery.where('id', job.skills[i]);
+                } else {
+                    skillsQuery.orWhere(`id`, job.skills[i]);
+                }
+            }
         });
+
+        console.log(tasksQuery.toString());
 
         let tasks = await tasksQuery;
         let skills = await skillsQuery;
