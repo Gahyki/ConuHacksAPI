@@ -6,7 +6,7 @@ const sendError = require('../helpers/sendError');
 
 router.get('/:id', async (req, res) => {
 
-    if(utils.isEmptyOrNull(req.params, 'id'))
+    if (utils.isEmptyOrNull(req.params, 'id'))
         return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid event id.' });
 
     let { id } = req.params; //selected event id
