@@ -35,6 +35,8 @@ const index = require('./routes/index');
 app.use('/', index);
 const users = require('./routes/users');
 app.use('/users', users);
+const events = require('./routes/events');
+app.use('/events', events);
 
 // Listen on port
 const port = process.env.PORT || 3000;

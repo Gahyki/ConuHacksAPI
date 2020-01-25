@@ -1,4 +1,7 @@
 module.exports = { 
+    isNullOrUndefined(obj) {
+        return obj === undefined || obj === null;
+    },
     isEmptyOrNull(obj, ...fields) {
         for(let field of fields)
             if(obj[field] === null || obj[field] == undefined || obj[field] === '')
