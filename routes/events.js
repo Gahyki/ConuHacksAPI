@@ -4,6 +4,17 @@ const db = require('../helpers/db');
 const utils = require('../helpers/utils');
 const sendError = require('../helpers/sendError');
 
+router.get('/list', async (req, res) => {
+    try {
+        current_date = new Date().toLocaleString()
+        let events_list = await db('events').select().where('end', '>=', current_date);
+        res.json(events_list);
+    } catch (err) {
+        sendError(res, err);
+    }
+
+});
+
 router.get('/:id', async (req, res) => {
 
     if (utils.isEmptyOrNull(req.params, 'id'))
@@ -25,6 +36,8 @@ router.get('/:id', async (req, res) => {
     }
 
 });
+
+
 
 
 module.exports = router;
