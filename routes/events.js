@@ -36,12 +36,10 @@ router.get('/:id', async (req, res) => {
         let jobsQuery = db('jobs').select();
         let skillsQuery = db('skills').select();
         let tasksQuery = db('tasks').select();
-
-        if(event.jobs.length > 0) {
-            event.jobs.forEach(jobID => jobsQuery.where('id', jobID));
-            event.jobs = await jobsQuery;
-        }
         
+        event.jobs.forEach(jobID => jobsQuery.where('id', jobID));
+        event.jobs = await jobsQuery;
+
         event.jobs.forEach(job => { 
             job.tasks = JSON.parse(job.tasks);
             job.skills = JSON.parse(job.skills);
@@ -54,11 +52,18 @@ router.get('/:id', async (req, res) => {
         let skills = await skillsQuery;
 
         event.jobs.forEach(job => {
+            
             for(let i in job.tasks)
                 job.tasks[i] = tasks.find(t => t.id === job.tasks[i]);
+
             for(let i in job.skills)
-                job.skills[i] = skills.find(s => s.id === job.skills[i]);        
+                job.skills[i] = skills.find(s => s.id === job.skills[i]);
+                
+            job.tasks = job.tasks.filter(t => !utils.isNullOrUndefined(t));
+            job.skills = job.skills.filter(s => !utils.isNullOrUndefined(s));
         });
+
+        event.jobs = event.jobs.filter(j => !utils.isNullOrUndefined(j));
 
         res.json(event);
 

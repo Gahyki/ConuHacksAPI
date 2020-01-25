@@ -64,8 +64,6 @@ router.get('/:id', async (req, res) => {
     let { id } = req.params;
 
     try {
-        let event = await db('events').select().where('id', id).first();
-
         let user = await db('users').select().where('id', id).first();
         if (utils.isNullOrUndefined(user))
             return res.json({ error: 'No such user.' })
@@ -94,5 +92,70 @@ router.get('/:id', async (req, res) => {
     }
 
 });
+
+router.get('/:id/events', async (req, res) => {
+    if (utils.isEmptyOrNull(req.params, 'id'))
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid user id.' });
+
+    let { id } = req.params;
+
+    try {
+        let userjobs = await db('user_jobs').select().where('user_id', id);
+        let eventQuery = db('events').select(); 
+
+        userjobs.forEach(({ event_id }) => eventQuery.orWhere('id', event_id));
+
+        let events = await eventQuery;
+        let jobsQuery = db('jobs').select();
+        let skillsQuery = db('skills').select();
+        let tasksQuery = db('tasks').select();
+
+        events.forEach(event => {
+            event.jobs = JSON.parse(event.jobs);
+            event.jobs.forEach(jobID => jobsQuery.orWhere('id', jobID));
+        });
+
+        let jobs = await jobsQuery;
+
+        jobs.forEach(job => { 
+            job.tasks = JSON.parse(job.tasks);
+            job.skills = JSON.parse(job.skills);
+
+            job.tasks.forEach(taskID => tasksQuery.orWhere('id', taskID));
+            job.skills.forEach(skillID => skillsQuery.orWhere('id', skillID));
+        });
+
+        let skills = await skillsQuery;
+        let tasks = await tasksQuery;
+        
+        events.forEach(event =>{
+
+            for(let i in event.jobs)
+                event.jobs[i] = jobs.find(j => j.id === event.jobs[i]);
+
+            event.jobs.forEach(job => {
+                if(utils.isNullOrUndefined(job))
+                    return;
+                
+                for(let i in job.tasks)
+                    job.tasks[i] = tasks.find(t => t.id === job.tasks[i])
+
+                for(let i in job.skills)
+                    job.skills[i] = skills.find(s => s.id === job.skills[i])
+                
+                job.tasks = job.tasks.filter(t => !utils.isNullOrUndefined(t));
+                job.skills = job.skills.filter(s => !utils.isNullOrUndefined(s));
+
+            });
+            event.jobs = event.jobs.filter(j => !utils.isNullOrUndefined(j))
+        });
+
+        res.json(events);
+
+    } catch(err){
+        sendError(res, err);
+    }
+});
+
 
 module.exports = router;
