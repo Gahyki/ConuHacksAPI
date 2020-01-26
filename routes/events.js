@@ -22,6 +22,37 @@ router.get('/list', async (_, res) => {
     }
 });
 
+router.post('/update', async (req, res) => {
+    if (utils.isEmptyOrNull(req.body, 'id'))
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.' });
+
+    let { id } = req.body;
+    let event = {}
+    for (let item in req.body) {
+        if (item == 'start' || item == 'end') {
+            event[item] = new Date(req.body[item])
+        } else if (item == 'name' || item == 'description' || item == 'admins' || item == 'jobs') {
+            event[item] = JSON.stringify(req.body[item])
+            if (item == 'admins') {
+                if (event.admins == '[]') {
+                    return res.status(HTTP_BAD_REQUEST).json({ error: 'Admins field cannot be 0' });
+                }
+            }
+            if (item = 'name') {
+                if (utils.isEmptyOrNull(JSON.parse(event.name), 'en', 'fr')) {
+                    return res.status(HTTP_BAD_REQUEST).json({ error: 'Name cannot be empty' });
+                }
+            }
+        }
+    }
+    try {
+        await db('events').where('id', id).update(event)
+        res.json({ msg: 'Event has been successfully updated' });
+    } catch (err) {
+        sendError(res, err);
+    }
+});
+
 router.get('/:id', async (req, res) => {
 
     if (utils.isEmptyOrNull(req.params, 'id'))
@@ -51,15 +82,15 @@ router.get('/:id', async (req, res) => {
         // Execute skills and tasks queries ?
         let hasSkills = false;
         let hasTasks = false;
-        
+
         // Exec jobs query, admin query and parse
-        if(event.jobs.length > 0) {
+        if (event.jobs.length > 0) {
             event.jobs.forEach(jobID => jobsQuery.orWhere('id', jobID));
             event.admins.forEach(adminID => adminsQuery.orWhere('id', adminID));
-            
-            if(event.jobs.length > 0)
+
+            if (event.jobs.length > 0)
                 event.jobs = await jobsQuery;
-            
+
             event.jobs.forEach(job => {
                 job.title = JSON.parse(job.title);
                 job.description = JSON.parse(job.description);
@@ -72,14 +103,14 @@ router.get('/:id', async (req, res) => {
         }
 
         // Find skills and tasks
-        event.jobs.forEach(job => { 
+        event.jobs.forEach(job => {
             job.tasks = JSON.parse(job.tasks);
             job.skills = JSON.parse(job.skills);
 
-            if(job.tasks.length > 0)
+            if (job.tasks.length > 0)
                 hasTasks = true;
 
-            if(job.skills.length > 0)
+            if (job.skills.length > 0)
                 hasSkills = true;
 
             job.tasks.forEach(taskID => tasksQuery.orWhere('id', taskID));
@@ -91,19 +122,19 @@ router.get('/:id', async (req, res) => {
 
         // Add and parse skills and tasks
         event.jobs.forEach(job => {
-            for(let i in job.tasks)
+            for (let i in job.tasks)
                 job.tasks[i] = tasks.find(t => t.id === job.tasks[i]);
 
-            for(let i in job.skills)
+            for (let i in job.skills)
                 job.skills[i] = skills.find(s => s.id === job.skills[i]);
-                
+
             job.tasks = job.tasks.filter(t => !utils.isNullOrUndefined(t));
             job.skills = job.skills.filter(s => !utils.isNullOrUndefined(s));
 
             job.tasks.forEach(task => task.name = JSON.parse(task.name));
             job.skills.forEach(skill => skill.name = JSON.parse(skill.name));
         });
-        
+
         // Send event object
         res.json(event);
 
@@ -114,19 +145,19 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/signup', needAuth, async (req, res) => {
-    if(utils.isEmptyOrNull(req.body, 'event_id', 'job_id')){
-        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.'});
+    if (utils.isEmptyOrNull(req.body, 'event_id', 'job_id')) {
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.' });
     }
     // Get user_id
     let user_id = req.user.id;
     let { event_id, job_id } = req.body;
-    
-    try{
+
+    try {
         let events = await db('user_jobs').select().where('user_id', user_id).andWhere('event_id', event_id).first();
         console.log(events);
-        if(!utils.isNullOrUndefined(events))
+        if (!utils.isNullOrUndefined(events))
             return res.status(HTTP_BAD_REQUEST).json({ error: 'User already registered for this event.' });
-        
+
         let user_jobs = {
             user_id,
             event_id,
@@ -137,22 +168,22 @@ router.post('/signup', needAuth, async (req, res) => {
         let username = await db('users').select().where('id', user_id).first();
 
         res.json({ msg: `${username.fname}, you successfully registered to this event.` });
-    } catch (err){
+    } catch (err) {
         sendError(err);
     }
 });
 
 router.post('/create', async (req, res) => {
-    if(utils.isEmptyOrNull(req.body, 'start', 'end', 'name', 'description', 'admins', 'jobs') || 
-        typeof req.body.start !== 'string' || 
-        typeof req.body.end !== 'string' || 
-        typeof req.body.name !== 'object' || 
+    if (utils.isEmptyOrNull(req.body, 'start', 'end', 'name', 'description', 'admins', 'jobs') ||
+        typeof req.body.start !== 'string' ||
+        typeof req.body.end !== 'string' ||
+        typeof req.body.name !== 'object' ||
         typeof req.body.description !== 'object' ||
-        !Array.isArray(req.body.admins) || 
+        !Array.isArray(req.body.admins) ||
         !Array.isArray(req.body.jobs))
 
         return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.' });
-    
+
     let { start, end, name, description, admins, jobs } = req.body;
 
     try {
@@ -167,15 +198,15 @@ router.post('/create', async (req, res) => {
 
         // Verify admins
         admins = JSON.stringify(admins.filter(adminID => typeof adminID === 'number'));
-        if(admins.length <= 0)
+        if (admins.length <= 0)
             return res.status(HTTP_BAD_REQUEST).json({ error: 'An event must have at least one admin user.' });
 
         // Create jobs
         let jobIDs = [];
-        for(let job of jobs) {
-            
+        for (let job of jobs) {
+
             let taskIDs = [];
-            for(let task of job.tasks) {
+            for (let task of job.tasks) {
 
                 // Insert task
                 task.name = JSON.stringify(task.name);
@@ -207,7 +238,7 @@ router.post('/create', async (req, res) => {
 
         res.json({ msg: 'Event created successfully.' });
 
-    } catch(err) {
+    } catch (err) {
         sendError(res, err);
     }
 
