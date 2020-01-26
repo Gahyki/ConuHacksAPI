@@ -98,6 +98,24 @@ router.get('/:id', async (req, res) => {
 
 });
 
+router.get('/:id/job', async (req, res) => {
+    if (utils.isEmptyOrNull(req.params, 'id'))
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Incomplete Query.' });
+
+    let { id } = req.params;
+
+    try {
+
+        // Queries
+        let userJobs = await db('user_jobs').select().where('user_id', id);
+        // Send event list
+        res.json(userJobs);
+
+    } catch (err) {
+        sendError(res, err);
+    }
+});
+
 router.get('/:id/events', async (req, res) => {
     if (utils.isEmptyOrNull(req.params, 'id'))
         return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid user id.' });
