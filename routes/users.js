@@ -74,18 +74,19 @@ router.get('/:id', async (req, res) => {
         delete user.password;
 
         // Find list of skill IDs
+        let skills = await db('skills').select();
         let userSkills = await db('user_skills').select().where('user_id', id);
         user.skills = []
         if (userSkills.length <= 0)
             return res.json(user);
         
         // Find corresponding skill objects
-        let skillQuery = db('skills').select();
-        userSkills.forEach(us => skillQuery.orWhere('id', us.skill_id));
-        user.skills = await skillQuery;
-        user.skills = user.skills.filter(s => !utils.isNullOrUndefined(s));
-        user.skills.forEach(skill => {
-            skill.name = JSON.parse(skill.name);
+        skills.forEach(skill => {
+            let s = userSkills.find(s => s.skill_id === skill.id);
+            if(s)
+                user.skills.push({ id: skill.id, name: JSON.parse(skill.name), rating: s.rating, nb_rating: s.nb_rating });
+            else
+                user.skills.push({ id: skill.id, name: JSON.parse(skill.name), rating: 0, nb_rating: 0 });
         });
 
         // Send user object
@@ -119,6 +120,8 @@ router.get('/:id/events', async (req, res) => {
             events.forEach(event => {
                 event.name = JSON.parse(event.name);
                 event.description = JSON.parse(event.description);
+                event.admins = JSON.parse(event.admins);
+                event.jobs = JSON.parse(event.jobs);
             });
         }
 
