@@ -101,7 +101,6 @@ router.get('/:id', async (req, res) => {
             event.admins = await adminsQuery;
             event.admins.forEach(user => delete user.password);
         }
-
         // Find skills and tasks
         event.jobs.forEach(job => {
             job.tasks = JSON.parse(job.tasks);
@@ -120,19 +119,23 @@ router.get('/:id', async (req, res) => {
         let tasks = hasTasks ? await tasksQuery : [];
         let skills = hasSkills ? await skillsQuery : [];
 
-        // Add and parse skills and tasks
+        tasks.forEach(t => t.name = JSON.parse(t.name));
+        skills.forEach(s => s.name = JSON.parse(s.name));
+
+
+
+        // Add and parse skills and tasks --problem starts here
         event.jobs.forEach(job => {
+            //console.log(job);
             for (let i in job.tasks)
                 job.tasks[i] = tasks.find(t => t.id === job.tasks[i]);
 
-            for (let i in job.skills)
+            for (let i in job.skills){
                 job.skills[i] = skills.find(s => s.id === job.skills[i]);
-
+                
+            }
             job.tasks = job.tasks.filter(t => !utils.isNullOrUndefined(t));
             job.skills = job.skills.filter(s => !utils.isNullOrUndefined(s));
-
-            job.tasks.forEach(task => task.name = JSON.parse(task.name));
-            job.skills.forEach(skill => skill.name = JSON.parse(skill.name));
         });
 
         // Send event object
