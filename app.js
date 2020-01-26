@@ -1,6 +1,7 @@
 const dotenv = require('dotenv');
 const express = require('express');
 const app = express();
+var cors = require('cors')
 const passport = require('passport');
 const bodyparser = require('body-parser');
 const cookieparser = require('cookie-parser');
@@ -16,6 +17,7 @@ global.HTTP_FORBIDDEN = 403;
 global.HTTP_INTERNAL_ERROR = 500;
 
 // Init body parser, cookie parser, express sessions, and passport
+app.use(cors())
 app.use(bodyparser.json());
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(cookieparser());

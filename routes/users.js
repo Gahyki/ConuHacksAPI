@@ -65,17 +65,21 @@ router.get('/:id', async (req, res) => {
 
     try {
         
+        // Find user
         let user = await db('users').select().where('id', id).first();
         if (utils.isNullOrUndefined(user))
             return res.json({ error: 'No such user.' });
 
+        // Delete password field
         delete user.password;
 
+        // Find list of skill IDs
         let userSkills = await db('user_skills').select().where('user_id', id);
         user.skills = []
         if (userSkills.length <= 0)
             return res.json(user);
         
+        // Find corresponding skill objects
         let skillQuery = db('skills').select();
         userSkills.forEach(us => skillQuery.orWhere('id', us.skill_id));
         user.skills = await skillQuery;
@@ -84,6 +88,7 @@ router.get('/:id', async (req, res) => {
             skill.name = JSON.parse(skill.name);
         });
 
+        // Send user object
         res.json(user);
         
     } catch (err) {
@@ -91,5 +96,39 @@ router.get('/:id', async (req, res) => {
     }
 
 });
+
+router.get('/:id/events', async (req, res) => {
+    if (utils.isEmptyOrNull(req.params, 'id'))
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid user id.' });
+
+    let { id } = req.params;
+
+    try {
+
+        // Queries
+        let userjobs = await db('user_jobs').select().where('user_id', id);
+        let eventQuery = db('events').select(); 
+
+        // Event list to be sent
+        let events = [];
+
+        // Find events and parse if necessary
+        if(userjobs.length > 0) { 
+            userjobs.forEach(({ event_id }) => eventQuery.orWhere('id', event_id));
+            events = await eventQuery;
+            events.forEach(event => {
+                event.name = JSON.parse(event.name);
+                event.description = JSON.parse(event.description);
+            });
+        }
+
+        // Send event list
+        res.json(events);
+
+    } catch(err){
+        sendError(res, err);
+    }
+});
+
 
 module.exports = router;

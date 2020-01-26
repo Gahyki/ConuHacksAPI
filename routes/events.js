@@ -5,51 +5,90 @@ const utils = require('../helpers/utils');
 const sendError = require('../helpers/sendError');
 const needAuth = require('../helpers/needAuth');
 
+router.get('/list', async (req, res) => {
+    try {
+        current_date = new Date().toLocaleString()
+        let events_list = await db('events').select().where('end', '>=', current_date);
+        res.json(events_list);
+    } catch (err) {
+        sendError(res, err);
+    }
+
+});
+
 router.get('/:id', async (req, res) => {
 
     if (utils.isEmptyOrNull(req.params, 'id'))
         return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid event id.' });
 
-    let { id } = req.params; //selected event id
+    let { id } = req.params;
 
     try {
-        //comparing event ids
-        let event = await db('events').select().where('id', id).first(); 
 
-        if(utils.isNullOrUndefined(event))
+        // Find event
+        let event = await db('events').select().where('id', id).first();
+
+        // No event found
+        if (utils.isNullOrUndefined(event))
             return res.json({ error: 'No such event.' });
 
-        //Arrays to be read
+        // Parse job ids
         event.jobs = JSON.parse(event.jobs);
 
-        //selecting queries
+        // Queries
         let jobsQuery = db('jobs').select();
         let skillsQuery = db('skills').select();
         let tasksQuery = db('tasks').select();
 
+        // Execute skills and tasks queries ?
+        let hasSkills = false;
+        let hasTasks = false;
+        
+        // Exec jobs query and parse
         if(event.jobs.length > 0) {
             event.jobs.forEach(jobID => jobsQuery.where('id', jobID));
             event.jobs = await jobsQuery;
+            event.jobs = event.jobs.filter(j => !utils.isNullOrUndefined(j));
+            event.jobs.forEach(job => {
+                job.title = JSON.parse(job.title);
+                job.description = JSON.parse(job.description);
+            });
         }
-        
+
+        // Find skills and tasks
         event.jobs.forEach(job => { 
             job.tasks = JSON.parse(job.tasks);
             job.skills = JSON.parse(job.skills);
 
-            job.tasks.forEach(taskID => tasksQuery.where('id', taskID));
-            job.skills.forEach(skillID => skillsQuery.where('id', skillID));
+            if(job.tasks.length > 0)
+                hasTasks = true;
+
+            if(job.skills.length > 0)
+                hasSkills = true;
+
+            job.tasks.forEach(taskID => tasksQuery.orWhere('id', taskID));
+            job.skills.forEach(skillID => skillsQuery.orWhere('id', skillID));
         });
 
-        let tasks = await tasksQuery;
-        let skills = await skillsQuery;
+        let tasks = hasTasks ? await tasksQuery : [];
+        let skills = hasSkills ? await skillsQuery : [];
 
+        // Add and parse skills and tasks
         event.jobs.forEach(job => {
             for(let i in job.tasks)
                 job.tasks[i] = tasks.find(t => t.id === job.tasks[i]);
-            for(let i in job.skills)
-                job.skills[i] = skills.find(s => s.id === job.skills[i]);        
-        });
 
+            for(let i in job.skills)
+                job.skills[i] = skills.find(s => s.id === job.skills[i]);
+                
+            job.tasks = job.tasks.filter(t => !utils.isNullOrUndefined(t));
+            job.skills = job.skills.filter(s => !utils.isNullOrUndefined(s));
+
+            job.tasks.forEach(task => task.name = JSON.parse(task.name));
+            job.skills.forEach(skill => skill.name = JSON.parse(skill.name));
+        });
+        
+        // Send event object
         res.json(event);
 
     } catch (err) {
@@ -74,8 +113,8 @@ router.post('/create', async (req, res) => {
     try {
 
         // Parse dates
-        start = Date.parse(start);
-        end = Date.parse(end);
+        start = new Date(start);
+        end = new Date(end);
 
         // Stringify name and description
         name = JSON.stringify(name);
@@ -90,19 +129,17 @@ router.post('/create', async (req, res) => {
 
                 // Insert task
                 task.name = JSON.stringify(task.name);
-                console.log('task', task);
                 let [taskID] = await db('tasks').insert(task);
-                console.log('taskID', taskID);
                 taskIDs.push(taskID);
 
             }
+
+            // Insert job
             job.title = JSON.stringify(job.title);
             job.description = JSON.stringify(job.description);
             job.tasks = JSON.stringify(taskIDs);
             job.skills = JSON.stringify(job.skills);
-            console.log('job', job);
             let [jobID] = await db('jobs').insert(job);
-            console.log('jobID', jobID);
             jobIDs.push(jobID);
 
         }
@@ -111,11 +148,10 @@ router.post('/create', async (req, res) => {
         // Verify admins
         admins = JSON.stringify(admins.filter(adminID => typeof adminID === 'number'));
 
-        
         // Insert event
         await db('events').insert({
-            start: start.toLocaleString(),
-            end: end.toLocaleString(),
+            start,
+            end,
             name,
             description,
             admins,
@@ -129,5 +165,7 @@ router.post('/create', async (req, res) => {
     }
 
 });
+
+
 
 module.exports = router;
