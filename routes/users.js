@@ -64,29 +64,33 @@ router.get('/:id', async (req, res) => {
     let { id } = req.params;
 
     try {
+        
+        // Find user
         let user = await db('users').select().where('id', id).first();
         if (utils.isNullOrUndefined(user))
-            return res.json({ error: 'No such user.' })
+            return res.json({ error: 'No such user.' });
 
+        // Delete password field
         delete user.password;
 
-        let user_skills = await db('user_skills').select().where('user_id', id)
+        // Find list of skill IDs
+        let userSkills = await db('user_skills').select().where('user_id', id);
         user.skills = []
-        if (utils.isEmptyOrNull(user_skills)) { // if user has no skills yet
-            res.json(user)
-        } else { // if user has skills
-            for (let i = 0; i < user_skills.length; i++) {
-                skill_id = user_skills[i].skill_id;
-                let current_skill = await db('skills').select().where('id', skill_id).first()
-                full_skill = {
-                    name: current_skill.name,
-                    rating: user_skills[i].rating,
-                    nb_rating: user_skills[i].nb_rating
-                }
-                user.skills.push(full_skill)
-            }
-            res.json(user)
-        }
+        if (userSkills.length <= 0)
+            return res.json(user);
+        
+        // Find corresponding skill objects
+        let skillQuery = db('skills').select();
+        userSkills.forEach(us => skillQuery.orWhere('id', us.skill_id));
+        user.skills = await skillQuery;
+        user.skills = user.skills.filter(s => !utils.isNullOrUndefined(s));
+        user.skills.forEach(skill => {
+            skill.name = JSON.parse(skill.name);
+        });
+
+        // Send user object
+        res.json(user);
+        
     } catch (err) {
         sendError(res, err);
     }
@@ -100,56 +104,25 @@ router.get('/:id/events', async (req, res) => {
     let { id } = req.params;
 
     try {
+
+        // Queries
         let userjobs = await db('user_jobs').select().where('user_id', id);
         let eventQuery = db('events').select(); 
 
-        userjobs.forEach(({ event_id }) => eventQuery.orWhere('id', event_id));
+        // Event list to be sent
+        let events = [];
 
-        let events = await eventQuery;
-        let jobsQuery = db('jobs').select();
-        let skillsQuery = db('skills').select();
-        let tasksQuery = db('tasks').select();
-
-        events.forEach(event => {
-            event.jobs = JSON.parse(event.jobs);
-            event.jobs.forEach(jobID => jobsQuery.orWhere('id', jobID));
-        });
-
-        let jobs = await jobsQuery;
-
-        jobs.forEach(job => { 
-            job.tasks = JSON.parse(job.tasks);
-            job.skills = JSON.parse(job.skills);
-
-            job.tasks.forEach(taskID => tasksQuery.orWhere('id', taskID));
-            job.skills.forEach(skillID => skillsQuery.orWhere('id', skillID));
-        });
-
-        let skills = await skillsQuery;
-        let tasks = await tasksQuery;
-        
-        events.forEach(event =>{
-
-            for(let i in event.jobs)
-                event.jobs[i] = jobs.find(j => j.id === event.jobs[i]);
-
-            event.jobs.forEach(job => {
-                if(utils.isNullOrUndefined(job))
-                    return;
-                
-                for(let i in job.tasks)
-                    job.tasks[i] = tasks.find(t => t.id === job.tasks[i])
-
-                for(let i in job.skills)
-                    job.skills[i] = skills.find(s => s.id === job.skills[i])
-                
-                job.tasks = job.tasks.filter(t => !utils.isNullOrUndefined(t));
-                job.skills = job.skills.filter(s => !utils.isNullOrUndefined(s));
-
+        // Find events and parse if necessary
+        if(userjobs.length > 0) { 
+            userjobs.forEach(({ event_id }) => eventQuery.orWhere('id', event_id));
+            events = await eventQuery;
+            events.forEach(event => {
+                event.name = JSON.parse(event.name);
+                event.description = JSON.parse(event.description);
             });
-            event.jobs = event.jobs.filter(j => !utils.isNullOrUndefined(j))
-        });
+        }
 
+        // Send event list
         res.json(events);
 
     } catch(err){
