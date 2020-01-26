@@ -5,7 +5,7 @@ const utils = require('../helpers/utils');
 const sendError = require('../helpers/sendError');
 const needAuth = require('../helpers/needAuth');
 
-router.get('/list', async (req, res) => {
+router.get('/list', async (_, res) => {
     try {
         current_date = new Date().toLocaleString()
         let events_list = await db('events').select().where('end', '>=', current_date);
@@ -13,7 +13,6 @@ router.get('/list', async (req, res) => {
     } catch (err) {
         sendError(res, err);
     }
-
 });
 
 router.get('/:id', async (req, res) => {
