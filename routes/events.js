@@ -147,13 +147,12 @@ router.get('/:id', async (req, res) => {
 
 });
 
-router.post('/signup', needAuth, async (req, res) => {
-    if (utils.isEmptyOrNull(req.body, 'event_id', 'job_id')) {
+router.post('/signup', async (req, res) => {
+    if (utils.isEmptyOrNull(req.body, 'user_id', 'event_id', 'job_id')) {
         return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.' });
     }
     // Get user_id
-    let user_id = req.user.id;
-    let { event_id, job_id } = req.body;
+    let { user_id, event_id, job_id } = req.body;
 
     try {
         let events = await db('user_jobs').select().where('user_id', user_id).andWhere('event_id', event_id).first();
