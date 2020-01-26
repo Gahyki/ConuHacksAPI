@@ -12,6 +12,8 @@ router.get('/list', async (_, res) => {
         events.forEach(event => {
             event.name = JSON.parse(event.name);
             event.description = JSON.parse(event.description);
+            event.admins = JSON.parse(event.admins);
+            event.jobs = JSON.parse(event.jobs);
         });
 
         res.json(events);
@@ -36,29 +38,37 @@ router.get('/:id', async (req, res) => {
         if (utils.isNullOrUndefined(event))
             return res.json({ error: 'No such event.' });
 
-        // Parse job ids
+        // Parse job ids and admin ids
         event.jobs = JSON.parse(event.jobs);
+        event.admins = JSON.parse(event.admins);
 
         // Queries
         let jobsQuery = db('jobs').select();
         let skillsQuery = db('skills').select();
         let tasksQuery = db('tasks').select();
+        let adminsQuery = db('users').select();
 
         // Execute skills and tasks queries ?
         let hasSkills = false;
         let hasTasks = false;
         
-        // Exec jobs query and parse
+        // Exec jobs query, admin query and parse
         if(event.jobs.length > 0) {
-            event.jobs.forEach(jobID => jobsQuery.where('id', jobID));
-            event.jobs = await jobsQuery;
-            event.jobs = event.jobs.filter(j => !utils.isNullOrUndefined(j));
+            event.jobs.forEach(jobID => jobsQuery.orWhere('id', jobID));
+            event.admins.forEach(adminID => adminsQuery.orWhere('id', adminID));
+            
+            if(event.jobs.length > 0)
+                event.jobs = await jobsQuery;
+            
             event.jobs.forEach(job => {
                 job.title = JSON.parse(job.title);
                 job.description = JSON.parse(job.description);
             });
             event.name = JSON.parse(event.name);
             event.description = JSON.parse(event.description);
+
+            event.admins = await adminsQuery;
+            event.admins.forEach(user => delete user.password);
         }
 
         // Find skills and tasks
@@ -126,6 +136,11 @@ router.post('/create', async (req, res) => {
         name = JSON.stringify(name);
         description = JSON.stringify(description);
 
+        // Verify admins
+        admins = JSON.stringify(admins.filter(adminID => typeof adminID === 'number'));
+        if(admins.length <= 0)
+            return res.status(HTTP_BAD_REQUEST).json({ error: 'An event must have at least one admin user.' });
+
         // Create jobs
         let jobIDs = [];
         for(let job of jobs) {
@@ -150,9 +165,6 @@ router.post('/create', async (req, res) => {
 
         }
         jobs = JSON.stringify(jobIDs);
-
-        // Verify admins
-        admins = JSON.stringify(admins.filter(adminID => typeof adminID === 'number'));
 
         // Insert event
         await db('events').insert({
