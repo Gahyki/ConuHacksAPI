@@ -154,12 +154,7 @@ router.post('/signup', needAuth, async (req, res) => {
 
     try {
         let events = await db('user_jobs').select().where('user_id', user_id).andWhere('event_id', event_id).first();
-<<<<<<< HEAD
-        console.log(events);
-        if (!utils.isNullOrUndefined(events))
-=======
         if(!utils.isNullOrUndefined(events))
->>>>>>> c02b21a53204e2bcc881ec9286e0f74cdc12e847
             return res.status(HTTP_BAD_REQUEST).json({ error: 'User already registered for this event.' });
 
         let user_jobs = {
