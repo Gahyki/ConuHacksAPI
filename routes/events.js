@@ -3,6 +3,7 @@ const router = express();
 const db = require('../helpers/db');
 const utils = require('../helpers/utils');
 const sendError = require('../helpers/sendError');
+const needAuth = require('../helpers/needAuth');
 
 router.get('/list', async (req, res) => {
     try {
@@ -12,7 +13,6 @@ router.get('/list', async (req, res) => {
     } catch (err) {
         sendError(res, err);
     }
-
 });
 
 router.get('/:id', async (req, res) => {
@@ -87,7 +87,33 @@ router.get('/:id', async (req, res) => {
 
 });
 
+router.post('/signup', needAuth, async (req, res) => {
+    if(utils.isEmptyOrNull(req.body, 'event_id', 'job_id')){
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.'});
+    }
+    // Get user_id
+    let user_id = req.user.id;
+    let { event_id, job_id } = req.body;
+    
+    try{
+        let events = await db('user_jobs').select().where('user_id', user_id).andWhere('event_id', event_id).first();
+        console.log(events);
+        if(!utils.isNullOrUndefined(events))
+            return res.status(HTTP_BAD_REQUEST).json({ error: 'User already registered for this event.' });
+        
+        let user_jobs = {
+            user_id,
+            event_id,
+            job_id
+        };
+        await db('user_jobs').insert(user_jobs);
 
+        let username = await db('users').select().where('id', user_id).first();
 
+        res.json({ msg: `${username.fname}, you successfully registered to this event.` });
+    } catch (err){
+        sendError(err);
+    }
+});
 
 module.exports = router;
