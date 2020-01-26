@@ -64,31 +64,28 @@ router.get('/:id', async (req, res) => {
     let { id } = req.params;
 
     try {
-        let event = await db('events').select().where('id', id).first();
-
+        
         let user = await db('users').select().where('id', id).first();
         if (utils.isNullOrUndefined(user))
-            return res.json({ error: 'No such user.' })
+            return res.json({ error: 'No such user.' });
 
         delete user.password;
 
-        let user_skills = await db('user_skills').select().where('user_id', id)
+        let userSkills = await db('user_skills').select().where('user_id', id);
         user.skills = []
-        if (utils.isEmptyOrNull(user_skills)) { // if user has no skills yet
-            res.json(user)
-        } else { // if user has skills
-            for (let i = 0; i < user_skills.length; i++) {
-                skill_id = user_skills[i].skill_id;
-                let current_skill = await db('skills').select().where('id', skill_id).first()
-                full_skill = {
-                    name: current_skill.name,
-                    rating: user_skills[i].rating,
-                    nb_rating: user_skills[i].nb_rating
-                }
-                user.skills.push(full_skill)
-            }
-            res.json(user)
-        }
+        if (userSkills.length <= 0)
+            return res.json(user);
+        
+        let skillQuery = db('skills').select();
+        userSkills.forEach(us => skillQuery.orWhere('id', us.skill_id));
+        user.skills = await skillQuery;
+        user.skills = user.skills.filter(s => !utils.isNullOrUndefined(s));
+        user.skills.forEach(skill => {
+            skill.name = JSON.parse(skill.name);
+        });
+
+        res.json(user);
+        
     } catch (err) {
         sendError(res, err);
     }

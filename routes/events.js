@@ -3,6 +3,7 @@ const router = express();
 const db = require('../helpers/db');
 const utils = require('../helpers/utils');
 const sendError = require('../helpers/sendError');
+const needAuth = require('../helpers/needAuth');
 
 router.get('/:id', async (req, res) => {
 
@@ -57,5 +58,76 @@ router.get('/:id', async (req, res) => {
 
 });
 
+router.post('/create', async (req, res) => {
+    if(utils.isEmptyOrNull(req.body, 'start', 'end', 'name', 'description', 'admins', 'jobs') || 
+        typeof req.body.start !== 'string' || 
+        typeof req.body.end !== 'string' || 
+        typeof req.body.name !== 'object' || 
+        typeof req.body.description !== 'object' ||
+        !Array.isArray(req.body.admins) || 
+        !Array.isArray(req.body.jobs))
+
+        return res.status(HTTP_BAD_REQUEST).json({ error: 'Invalid request body.' });
+    
+    let { start, end, name, description, admins, jobs } = req.body;
+
+    try {
+
+        // Parse dates
+        start = Date.parse(start);
+        end = Date.parse(end);
+
+        // Stringify name and description
+        name = JSON.stringify(name);
+        description = JSON.stringify(description);
+
+        // Create jobs
+        let jobIDs = [];
+        for(let job of jobs) {
+            
+            let taskIDs = [];
+            for(let task of job.tasks) {
+
+                // Insert task
+                task.name = JSON.stringify(task.name);
+                console.log('task', task);
+                let [taskID] = await db('tasks').insert(task);
+                console.log('taskID', taskID);
+                taskIDs.push(taskID);
+
+            }
+            job.title = JSON.stringify(job.title);
+            job.description = JSON.stringify(job.description);
+            job.tasks = JSON.stringify(taskIDs);
+            job.skills = JSON.stringify(job.skills);
+            console.log('job', job);
+            let [jobID] = await db('jobs').insert(job);
+            console.log('jobID', jobID);
+            jobIDs.push(jobID);
+
+        }
+        jobs = JSON.stringify(jobIDs);
+
+        // Verify admins
+        admins = JSON.stringify(admins.filter(adminID => typeof adminID === 'number'));
+
+        
+        // Insert event
+        await db('events').insert({
+            start: start.toLocaleString(),
+            end: end.toLocaleString(),
+            name,
+            description,
+            admins,
+            jobs
+        });
+
+        res.json({ msg: 'Event created successfully.' });
+
+    } catch(err) {
+        sendError(res, err);
+    }
+
+});
 
 module.exports = router;
