@@ -39,6 +39,8 @@ const users = require('./routes/users');
 app.use('/users', users);
 const events = require('./routes/events');
 app.use('/events', events);
+const skills = require('./routes/skills');
+app.use('/skills', skills);
 
 // Listen on port
 const port = process.env.PORT || 3000;
