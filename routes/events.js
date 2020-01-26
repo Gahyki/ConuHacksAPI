@@ -7,9 +7,14 @@ const needAuth = require('../helpers/needAuth');
 
 router.get('/list', async (_, res) => {
     try {
-        current_date = new Date().toLocaleString()
-        let events_list = await db('events').select().where('end', '>=', current_date);
-        res.json(events_list);
+        let events = await db('events').select().where('end', '>=', new Date());
+
+        events.forEach(event => {
+            event.name = JSON.parse(event.name);
+            event.description = JSON.parse(event.description);
+        });
+
+        res.json(events);
     } catch (err) {
         sendError(res, err);
     }
@@ -52,6 +57,8 @@ router.get('/:id', async (req, res) => {
                 job.title = JSON.parse(job.title);
                 job.description = JSON.parse(job.description);
             });
+            event.name = JSON.parse(event.name);
+            event.description = JSON.parse(event.description);
         }
 
         // Find skills and tasks
